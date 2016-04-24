@@ -70,8 +70,9 @@ def main():
         for item in items:
             print('{0} ({1})'.format(item['name'], item['id']))'''
 
-    id = creatingNewFolder(service)
-    id1 = creatingFolderInsideAFolder(service, id)
+    #id = creatingNewFolder(service)
+    #id1 = creatingFolderInsideAFolder(service, id)
+    #getFolderID(service)
 
 
 def creatingNewFolder(service):
@@ -86,16 +87,35 @@ def creatingNewFolder(service):
 
 
 def creatingFolderInsideAFolder(service, id):
-    #folder_id = id
+    # folder_id = id
     file_metadata = {
         'name': 'Folder inside a folder Test',
         'parents': [id],
         'mimeType': 'application/vnd.google-apps.folder'
     }
-    root_folder = service.files().create(body = file_metadata).execute()
+    root_folder = service.files().create(body=file_metadata).execute()
     print('Folder Inside Folder ID: %s' % root_folder['id'])
     return root_folder['id']
 
+
+# This function checks if any particular folder exists
+# If it exists it just returns its id otherwise that folder is created and id is returned
+def getFolderID(service):
+    page_token = None
+    while True:
+        response = service.files().list(q="mimeType='application/vnd.google-apps.folder'",
+                                              spaces='drive',
+                                              fields='nextPageToken, files(id, name)',
+                                              pageToken=page_token).execute()
+        for file in response.get('files', []):
+            # Process change
+            #print('Found file: %s (%s)' % (file.get('name'), file.get('id')))
+            if file.get('name')=='Test Folder Drive':
+                return file.get('id')
+        page_token = response.get('nextPageToken', None)
+        if page_token is None:
+            id = creatingNewFolder(service)
+            return id
 
 
 if __name__ == '__main__':
