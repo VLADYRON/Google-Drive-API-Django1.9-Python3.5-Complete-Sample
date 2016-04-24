@@ -7,3 +7,4 @@
 .idea/misc.xml
 .idea/test_google_drive_api_django.iml
 *.pyc
+Workspace/client_secret.json
