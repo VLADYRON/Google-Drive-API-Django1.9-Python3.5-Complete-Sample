@@ -1,4 +1,3 @@
-
 from __future__ import print_function
 import httplib2
 import os
@@ -10,13 +9,14 @@ from oauth2client import tools
 
 try:
     import argparse
+
     flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
 except ImportError:
     flags = None
 
 # If modifying these scopes, delete your previously saved credentials
 # at ~/.credentials/drive-python-quickstart.json
-SCOPES = 'https://www.googleapis.com/auth/drive.metadata.readonly'
+SCOPES = 'https://www.googleapis.com/auth/drive'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Drive API Python Quickstart'
 
@@ -44,10 +44,11 @@ def get_credentials():
         flow.user_agent = APPLICATION_NAME
         if flags:
             credentials = tools.run_flow(flow, store, flags)
-        else: # Needed only for compatibility with Python 2.6
+        else:  # Needed only for compatibility with Python 2.6
             credentials = tools.run(flow, store)
         print('Storing credentials to ' + credential_path)
     return credentials
+
 
 def main():
     """Shows basic usage of the Google Drive API.
@@ -68,6 +69,34 @@ def main():
         print('Files:')
         for item in items:
             print('{0} ({1})'.format(item['name'], item['id']))'''
+
+    id = creatingNewFolder(service)
+    id1 = creatingFolderInsideAFolder(service, id)
+
+
+def creatingNewFolder(service):
+    file_metadata = {
+        'name': 'Test Folder Drive',
+        'mimeType': 'application/vnd.google-apps.folder'
+    }
+    file = service.files().create(body=file_metadata,
+                                  fields='id').execute()
+    print('Folder ID: %s' % file.get('id'))
+    return file.get('id')
+
+
+def creatingFolderInsideAFolder(service, id):
+    #folder_id = id
+    file_metadata = {
+        'name': 'Folder inside a folder Test',
+        'parents': [id],
+        'mimeType': 'application/vnd.google-apps.folder'
+    }
+    root_folder = service.files().create(body = file_metadata).execute()
+    print('Folder Inside Folder ID: %s' % root_folder['id'])
+    return root_folder['id']
+
+
 
 if __name__ == '__main__':
     main()
