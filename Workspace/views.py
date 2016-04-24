@@ -9,8 +9,12 @@ from oauth2client import tools
 
 try:
     import argparse
+    '''Changed this for the oath-2.0 to be working in localserver'''
 
-    flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
+    #flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
+
+    '''changed portion'''
+    flags = tools.argparser.parse_args(args=[])
 except ImportError:
     flags = None
 
@@ -50,7 +54,7 @@ def get_credentials():
     return credentials
 
 
-def main():
+def indexmain(request):
     """Shows basic usage of the Google Drive API.
 
     Creates a Google Drive API service object and outputs the names and IDs
@@ -70,6 +74,7 @@ def main():
         for item in items:
             print('{0} ({1})'.format(item['name'], item['id']))'''
 
+    print("It works man")
     #id = creatingNewFolder(service)
     #id1 = creatingFolderInsideAFolder(service, id)
     #getFolderID(service)
