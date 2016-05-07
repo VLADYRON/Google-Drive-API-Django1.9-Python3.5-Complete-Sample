@@ -70,8 +70,9 @@ def main():
         for item in items:
             print('{0} ({1})'.format(item['name'], item['id']))'''
 
-    #id = creatingNewFolder(service)
-    #id1 = creatingFolderInsideAFolder(service, id)
+    id = creatingNewFolder(service)
+    id1 = creatingFolderInsideAFolder(service, id)
+    #print("Folder ID:"+id+" Subfolder ID:"+id1)
     #getFolderID(service)
 
 
