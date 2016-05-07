@@ -1,83 +1,113 @@
-from __future__ import print_function
-import httplib2
+'''
+Major references:
+1. Django Google API Sample:
+https://github.com/google/google-api-python-client/tree/master/samples/django_sample
+
+2. http://engineering.hackerearth.com/2014/06/07/using-google-apis-in-django/
+
+3. python-social-auth LIBRARY
+http://stackoverflow.com/questions/29058520/how-to-sign-in-with-the-google-api-using-django
+
+4. http://www.marinamele.com/use-the-google-analytics-api-with-django
+
+5. Storage Class
+https://developers.google.com/api-client-library/python/guide/django#storage
+
+6. Google Python Video
+https://www.youtube.com/watch?v=IVjZMIWhz3Y
+'''
+
+'''NECESSARY LIB FILES'''
 import os
+import logging
+import httplib2
 
-from apiclient import discovery
-import oauth2client
-from oauth2client import client
-from oauth2client import tools
+from googleapiclient.discovery import build
+from django.contrib.auth.decorators import login_required
+from django.core.urlresolvers import reverse
+from django.http import HttpResponse
+from django.http import HttpResponseBadRequest
+from django.http import HttpResponseRedirect
+from django.shortcuts import render
+from Workspace.models import *
+from test_google_drive_api_django import settings
+from oauth2client.contrib import xsrfutil
+from oauth2client.client import flow_from_clientsecrets
+from oauth2client.contrib.django_orm import Storage
 
-try:
-    import argparse
-    '''Changed this for the oath-2.0 to be working in localserver'''
+# CLIENT_SECRETS, name of a file containing the OAuth 2.0 information for this
+# application, including client_id and client_secret, which are found
+# on the API Access tab on the Google APIs
+# Console <http://code.google.com/apis/console>
+CLIENT_SECRETS = os.path.join(os.path.dirname(__file__), '..', 'client_secrets.json')
 
-    #flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
-
-    '''changed portion'''
-    flags = tools.argparser.parse_args(args=[])
-except ImportError:
-    flags = None
-
-# If modifying these scopes, delete your previously saved credentials
-# at ~/.credentials/drive-python-quickstart.json
-SCOPES = 'https://www.googleapis.com/auth/drive'
-CLIENT_SECRET_FILE = 'client_secret.json'
-APPLICATION_NAME = 'Drive API Python Quickstart'
-
-
-def get_credentials():
-    """Gets valid user credentials from storage.
-
-    If nothing has been stored, or if the stored credentials are invalid,
-    the OAuth2 flow is completed to obtain the new credentials.
-
-    Returns:
-        Credentials, the obtained credential.
-    """
-    home_dir = os.path.expanduser('~')
-    credential_dir = os.path.join(home_dir, '.credentials')
-    if not os.path.exists(credential_dir):
-        os.makedirs(credential_dir)
-    credential_path = os.path.join(credential_dir,
-                                   'drive-python-quickstart.json')
-
-    store = oauth2client.file.Storage(credential_path)
-    credentials = store.get()
-    if not credentials or credentials.invalid:
-        flow = client.flow_from_clientsecrets(CLIENT_SECRET_FILE, SCOPES)
-        flow.user_agent = APPLICATION_NAME
-        if flags:
-            credentials = tools.run_flow(flow, store, flags)
-        else:  # Needed only for compatibility with Python 2.6
-            credentials = tools.run(flow, store)
-        print('Storing credentials to ' + credential_path)
-    return credentials
+FLOW = flow_from_clientsecrets(
+    CLIENT_SECRETS,
+    scope='https://www.googleapis.com/auth/drive',
+    redirect_uri='http://127.0.0.1:8000/oauth2callback')
 
 
-def indexmain(request):
-    """Shows basic usage of the Google Drive API.
 
-    Creates a Google Drive API service object and outputs the names and IDs
-    for up to 10 files.
-    """
-    credentials = get_credentials()
-    http = credentials.authorize(httplib2.Http())
-    service = discovery.build('drive', 'v3', http=http)
+def index(request):
 
-    '''results = service.files().list(
-        pageSize=20,fields="nextPageToken, files(id, name)").execute()
-    items = results.get('files', [])
-    if not items:
-        print('No files found.')
-    else:
-        print('Files:')
-        for item in items:
-            print('{0} ({1})'.format(item['name'], item['id']))'''
+  '''I Have created a static user as I dont have any logged in user in my app right now'''
+  U = User(
+      username = 'example',
+      firstname= 'Bla Bla',
+      lastname= 'Bla Bla',
+      email = 'example@gmail.com'
+  )
+  U.save()
 
-    print("It works man")
-    #id = creatingNewFolder(service)
-    #id1 = creatingFolderInsideAFolder(service, id)
-    #getFolderID(service)
+  #This is a class created by google to save the credentials automatically in the database
+  storage = Storage(CredentialsModel, 'id', U, 'credential')
+  credential = storage.get()
+  if credential is None or credential.invalid == True:
+    FLOW.params['state'] = xsrfutil.generate_token(settings.SECRET_KEY,
+                                                   U)
+    authorize_url = FLOW.step1_get_authorize_url()
+    print(authorize_url)
+    return HttpResponseRedirect(authorize_url)
+  else:
+    http = httplib2.Http()
+    http = credential.authorize(http)
+    service = build('drive', 'v3', http=http)
+
+    #GOOGLE DRIVE FUNCTION CALLS
+    id = creatingNewFolder(service)
+    id1 = creatingFolderInsideAFolder(service, id)
+    print("Successful")
+    return HttpResponse("Folder Id: "+id+" Subfolder Id: "+id1)
+
+
+def auth_return(request):
+  '''The Token generated in index() should be validated here with the same user that was used to generate the token'''
+  U = User(
+      username = 'example',
+      firstname= 'Bla Bla',
+      lastname= 'Bla Bla',
+      email = 'example@gmail.com'
+  )
+  '''
+  Reference:
+  1. https://github.com/tschellenbach/Django-facebook/pull/564
+  2. encode() is used here because in Django 1.6 or less we used to get the string automatically
+  but in Django 1.7+ we have to use encode() to get the string
+  '''
+  if not xsrfutil.validate_token(settings.SECRET_KEY, (request.GET['state']).encode('utf-8'),
+                                 U):
+    print("Test: 1")
+    return  HttpResponseBadRequest()
+  print("Test: 2")
+  credential = FLOW.step2_exchange(request.GET)
+  storage = Storage(CredentialsModel, 'id', U, 'credential')
+  storage.put(credential)
+  return HttpResponseRedirect("/")
+
+
+
+'''Functions For Drive'''
+
 
 
 def creatingNewFolder(service):
@@ -123,5 +153,4 @@ def getFolderID(service):
             return id
 
 
-if __name__ == '__main__':
-    main()
+
