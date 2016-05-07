@@ -8,3 +8,7 @@
 .idea/test_google_drive_api_django.iml
 *.pyc
 Workspace/client_secret.json
+client_secrets.json
+test_google_drive_api_django/client_secrets.json
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/inspectionProfiles/Project_Default.xml
